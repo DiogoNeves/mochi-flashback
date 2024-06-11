@@ -123,7 +123,10 @@ def recall(query: str, top_k: int = 5) -> list[Document]:
 
 def _process_all_images():
   for image_file_name in os.listdir(DATA_FOLDER):
-    image_path = DATA_FOLDER + image_file_name
+    if image_file_name == ".gitkeep":
+      continue
+
+    image_path = os.path.join(DATA_FOLDER, image_file_name)
     encoded_image = _encode_image(image_path)
     details = extract_details_from_screenshot(encoded_image)
     print("Storing: ", details)
