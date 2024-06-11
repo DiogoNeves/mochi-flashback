@@ -1,6 +1,7 @@
 import os
 import requests
 import base64
+import numpy as np
 from openai import OpenAI
 
 # 1. Assume screenshots exist
@@ -82,7 +83,6 @@ vectors_store: list[Embedding] = []
 
 def store_details(details: str) -> None:
   embedding = _vectorise_text(details)
-
   details_store.append(details)
   vectors_store.append(embedding)
 
@@ -95,13 +95,31 @@ def _vectorise_text(text: str) -> Embedding:
   return response.data[0].embedding
 
 
-def recall(query: str) -> list[str]:
+def recall(query: str, top_k: int = 5) -> list[str]:
   query_embedding = _vectorise_text(query)
-  return []
+  query_vector = np.array(query_embedding)
+  vector_db = np.array(vectors_store)
+
+  # Compute cosine similarity
+  similarity_scores = np.dot(vector_db, query_vector) / \
+    (np.linalg.norm(vector_db, axis=1) * np.linalg.norm(query_vector))
+  
+  # Get the top_k indices with highest similarity scores
+  top_indices = np.argsort(similarity_scores)[::-1][:top_k]
+
+  # Retrieve the corresponding documents for the top results
+  top_documents = [details_store[i] for i in top_indices]
+
+  return top_documents
 
 
 if __name__ == "__main__":
   image_path = DATA_FOLDER + "2024-06-08_16.27.41.png"
   details = extract_details_from_screenshot(image_path)
-  print(details)
+  print("Storing: ", details)
+
   store_details(details)
+
+  recall_query = "How many screenshots did I have on 2024-06-08?"
+  results = recall(recall_query)
+  print("Results: ", results)
