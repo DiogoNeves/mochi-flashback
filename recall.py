@@ -33,8 +33,7 @@ SYSTEM_PROMPT = ("You are an assistant looking through the user's macOS screen"
 openai_client = OpenAI(api_key=API_KEY)
 
 
-def extract_details_from_screenshot(image_path: str) -> str:
-  base64_image = _encode_image(image_path)
+def extract_details_from_screenshot(encoded_image: str) -> str:
   user_message = ("Provide a short description of what's happening in this"
                   " screenshot.")
   payload = {
@@ -54,7 +53,7 @@ def extract_details_from_screenshot(image_path: str) -> str:
           {
             "type": "image_url",
             "image_url": {
-              "url": f"data:image/jpeg;base64,{base64_image}"
+              "url": f"data:image/jpeg;base64,{encoded_image}"
             }
           }
         ]
@@ -75,15 +74,17 @@ def _encode_image(image_path: str) -> str:
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 
+Document = tuple[str, str]  # details, encoded_image
 Embedding = list[float]
 
-details_store: list[str] = []
+document_store: list[Document] = []
 vectors_store: list[Embedding] = []
 
 
-def store_details(details: str) -> None:
+def store_details(document: Document) -> None:
+  details = document[0]
   embedding = _vectorise_text(details)
-  details_store.append(details)
+  document_store.append(document)
   vectors_store.append(embedding)
 
 
@@ -95,7 +96,7 @@ def _vectorise_text(text: str) -> Embedding:
   return response.data[0].embedding
 
 
-def recall(query: str, top_k: int = 5) -> list[str]:
+def recall(query: str, top_k: int = 5) -> list[Document]:
   query_embedding = _vectorise_text(query)
   query_vector = np.array(query_embedding)
   vector_db = np.array(vectors_store)
@@ -108,18 +109,20 @@ def recall(query: str, top_k: int = 5) -> list[str]:
   top_indices = np.argsort(similarity_scores)[::-1][:top_k]
 
   # Retrieve the corresponding documents for the top results
-  top_documents = [details_store[i] for i in top_indices]
+  top_documents = [document_store[i] for i in top_indices]
 
   return top_documents
 
 
 if __name__ == "__main__":
   image_path = DATA_FOLDER + "2024-06-08_16.27.41.png"
-  details = extract_details_from_screenshot(image_path)
+  encoded_image = _encode_image(image_path)
+  details = extract_details_from_screenshot(encoded_image)
   print("Storing: ", details)
 
-  store_details(details)
+  document = (details, encoded_image)
+  store_details(document)
 
   recall_query = "How many screenshots did I have on 2024-06-08?"
-  results = recall(recall_query)
-  print("Results: ", results)
+  results = recall(recall_query, top_k=2)
+  print("Results: ", [details for details, _ in results])
