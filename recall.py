@@ -3,6 +3,7 @@ import requests
 import base64
 import numpy as np
 from openai import OpenAI
+import pickle
 
 # 1. Assume screenshots exist
 # 2. Extract details from the screenshot
@@ -96,7 +97,7 @@ def _vectorise_text(text: str) -> Embedding:
   return response.data[0].embedding
 
 
-def recall(query: str, top_k: int = 5) -> list[Document]:
+def search(query: str, top_k: int) -> list[Document]:
   query_embedding = _vectorise_text(query)
   query_vector = np.array(query_embedding)
   vector_db = np.array(vectors_store)
@@ -114,15 +115,49 @@ def recall(query: str, top_k: int = 5) -> list[Document]:
   return top_documents
 
 
+def recall(query: str, top_k: int = 5) -> list[Document]:
+  results = search(query, top_k)
+  # TODO: ask llm to rank and filter the results
+  return results
+
+
+def _process_all_images():
+  for image_file_name in os.listdir(DATA_FOLDER):
+    image_path = DATA_FOLDER + image_file_name
+    encoded_image = _encode_image(image_path)
+    details = extract_details_from_screenshot(encoded_image)
+    print("Storing: ", details)
+
+    document = (details, encoded_image)
+    store_details(document)
+
+
+def _save_stores():
+  global document_store, vectors_store
+  with open("document_store.pkl", "wb") as document_file:
+    pickle.dump(document_store, document_file)
+
+  with open("vectors_store.pkl", "wb") as vectors_file:
+    pickle.dump(vectors_store, vectors_file)
+
+
+def _load_stores():
+  global document_store, vectors_store
+  with open("document_store.pkl", "rb") as document_file:
+    document_store = pickle.load(document_file)
+
+  with open("vectors_store.pkl", "rb") as vectors_file:
+    vectors_store = pickle.load(vectors_file)
+
+
 if __name__ == "__main__":
-  image_path = DATA_FOLDER + "2024-06-08_16.27.41.png"
-  encoded_image = _encode_image(image_path)
-  details = extract_details_from_screenshot(encoded_image)
-  print("Storing: ", details)
+  # _process_all_images()
+  # _save_stores()
 
-  document = (details, encoded_image)
-  store_details(document)
+  _load_stores()
+  # print("All documents", [details for details, _ in document_store])
+  # print("Count: ", len(document_store))
 
-  recall_query = "How many screenshots did I have on 2024-06-08?"
+  recall_query = "When was I using OBS?"
   results = recall(recall_query, top_k=2)
   print("Results: ", [details for details, _ in results])
