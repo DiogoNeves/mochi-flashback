@@ -3,7 +3,7 @@ import requests
 import base64
 from openai import OpenAI
 
-from document_store import Document, DocumentStore
+from document_store import Document, PersistentDocumentStore
 
 # 1. Assume screenshots exist
 # 2. Extract details from the screenshot
@@ -76,7 +76,8 @@ def _encode_image(image_path: str) -> str:
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 
-store = DocumentStore(openai_client=openai_client)
+store = PersistentDocumentStore(openai_client=openai_client,
+                                output_path=STORES_FOLDER)
 
 
 def recall(query: str, top_k: int = 5) -> list[Document]:
@@ -96,14 +97,15 @@ def _process_all_images():
     print("Storing: ", details)
 
     document = (details, encoded_image)
-    store.add_document(document)
+    store.add_document(details, document)
 
 
 if __name__ == "__main__":
-  # _process_all_images()
+  store.load_store()
 
-  # store.save_store(STORES_FOLDER)
-  store.load_store(STORES_FOLDER)
+  if len(store.documents) == 0:
+    _process_all_images()
+    store.save_store()
 
   recall_query = "When was I using OBS?"
   results = recall(recall_query, top_k=2)

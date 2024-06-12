@@ -1,9 +1,10 @@
-from typing import Optional
+import os
+from typing import Any, Optional
 from openai import OpenAI
 import numpy as np
 import pickle
 
-Document = tuple[str, str]  # details, encoded_image
+Document = Any
 Embedding = list[float]
 
 
@@ -20,14 +21,14 @@ class DocumentStore:
     def documents(self) -> list[Document]:
         return self._document_store
 
-    def add_document(self, document: Document):
-        details = document[0]
-        embedding = self._vectorise_text(details)
+    def add_document(self, key: str, document: Document):
+        embedding = self._vectorise_text(key)
         self._document_store.append(document)
         self._vectors_store.append(embedding)
     
     def search(self, query: str, top_k: int) -> list[Document]:
         query_embedding = self._vectorise_text(query)
+
         query_vector = np.array(query_embedding)
         vector_db = np.array(self._vectors_store)
 
@@ -49,28 +50,37 @@ class DocumentStore:
             model=EMBEDDING_MODEL_NAME
         )
         return response.data[0].embedding
-    
-    def save_store(self, output_path: str) -> None:
-        assert output_path.endswith("/")
 
-        doc_path = output_path + "document_store.pkl"
-        with open(doc_path, "wb") as document_file:
+
+class PersistentDocumentStore(DocumentStore):
+    """A DocumentStore that can save and load its state to/from disk.
+    This should only be used for debugging and development purposes.
+    It uses pickle to serialize the document and vector stores."""
+
+    def __init__(self, openai_client: OpenAI, output_path: Optional[str] = None):
+        super().__init__(openai_client)
+
+        store_path = output_path or "./"
+        assert store_path.endswith("/")
+        self._doc_path = store_path + "document_store.pkl"
+        self._vec_path = store_path + "vectors_store.pkl"
+
+    def save_store(self) -> None:
+        with open(self._doc_path, "wb") as document_file:
             pickle.dump(self._document_store, document_file)
-
-        vec_path = output_path + "vectors_store.pkl"
-        with open(vec_path, "wb") as vectors_file:
+        with open(self._vec_path, "wb") as vectors_file:
             pickle.dump(self._vectors_store, vectors_file)
 
-    def load_store(self, output_path: str) -> None:
-        assert output_path.endswith("/")
+    def load_store(self) -> None:
+        if not os.path.exists(self._doc_path) or \
+            not os.path.exists(self._vec_path):
+            return
 
-        doc_path = output_path + "document_store.pkl"
-        with open(doc_path, "rb") as document_file:
+        with open(self._doc_path, "rb") as document_file:
             document_store = pickle.load(document_file)
 
-        vec_path = output_path + "vectors_store.pkl"
-        with open(vec_path, "rb") as vectors_file:
+        with open(self._vec_path, "rb") as vectors_file:
             vectors_store = pickle.load(vectors_file)
-
+        
         self._document_store = document_store
         self._vectors_store = vectors_store
