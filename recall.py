@@ -1,9 +1,9 @@
 import os
 import requests
 import base64
-import numpy as np
 from openai import OpenAI
-import pickle
+
+from document_store import Document, DocumentStore
 
 # 1. Assume screenshots exist
 # 2. Extract details from the screenshot
@@ -11,6 +11,7 @@ import pickle
 # 4. Recall <- user triggered
 
 DATA_FOLDER = "data/"
+STORES_FOLDER = "stores/"
 
 EMBEDDING_MODEL_NAME = "text-embedding-3-small"
 INFERENCE_MODEL_NAME = "gpt-4o"
@@ -75,48 +76,11 @@ def _encode_image(image_path: str) -> str:
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 
-Document = tuple[str, str]  # details, encoded_image
-Embedding = list[float]
-
-document_store: list[Document] = []
-vectors_store: list[Embedding] = []
-
-
-def store_details(document: Document) -> None:
-  details = document[0]
-  embedding = _vectorise_text(details)
-  document_store.append(document)
-  vectors_store.append(embedding)
-
-
-def _vectorise_text(text: str) -> Embedding:
-  response = openai_client.embeddings.create(
-      input=text,
-      model=EMBEDDING_MODEL_NAME
-  )
-  return response.data[0].embedding
-
-
-def search(query: str, top_k: int) -> list[Document]:
-  query_embedding = _vectorise_text(query)
-  query_vector = np.array(query_embedding)
-  vector_db = np.array(vectors_store)
-
-  # Compute cosine similarity
-  similarity_scores = np.dot(vector_db, query_vector) / \
-    (np.linalg.norm(vector_db, axis=1) * np.linalg.norm(query_vector))
-  
-  # Get the top_k indices with highest similarity scores
-  top_indices = np.argsort(similarity_scores)[::-1][:top_k]
-
-  # Retrieve the corresponding documents for the top results
-  top_documents = [document_store[i] for i in top_indices]
-
-  return top_documents
+store = DocumentStore(openai_client=openai_client)
 
 
 def recall(query: str, top_k: int = 5) -> list[Document]:
-  results = search(query, top_k)
+  results = store.search(query, top_k)
   # TODO: ask llm to rank and filter the results
   return results
 
@@ -132,35 +96,17 @@ def _process_all_images():
     print("Storing: ", details)
 
     document = (details, encoded_image)
-    store_details(document)
-
-
-def _save_stores():
-  global document_store, vectors_store
-  with open("document_store.pkl", "wb") as document_file:
-    pickle.dump(document_store, document_file)
-
-  with open("vectors_store.pkl", "wb") as vectors_file:
-    pickle.dump(vectors_store, vectors_file)
-
-
-def _load_stores():
-  global document_store, vectors_store
-  with open("document_store.pkl", "rb") as document_file:
-    document_store = pickle.load(document_file)
-
-  with open("vectors_store.pkl", "rb") as vectors_file:
-    vectors_store = pickle.load(vectors_file)
+    store.add_document(document)
 
 
 if __name__ == "__main__":
   # _process_all_images()
-  # _save_stores()
 
-  _load_stores()
-  # print("All documents", [details for details, _ in document_store])
-  # print("Count: ", len(document_store))
+  # store.save_store(STORES_FOLDER)
+  store.load_store(STORES_FOLDER)
 
   recall_query = "When was I using OBS?"
   results = recall(recall_query, top_k=2)
-  print("Results: ", [details for details, _ in results])
+
+  all_details = [details for details, _ in results]
+  print(f"Results: {all_details}\nCount: {len(results)}")
