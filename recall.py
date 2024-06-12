@@ -66,8 +66,9 @@ def extract_details_from_screenshot(encoded_image: str) -> str:
 
   response = requests.post("https://api.openai.com/v1/chat/completions",
                            headers=OPEN_AI_HEADERS, json=payload)
-  model_response = response.json()
+  response.raise_for_status()
 
+  model_response = response.json()
   return model_response["choices"][0]["message"]["content"]
 
 
@@ -91,13 +92,27 @@ def _process_all_images():
     if image_file_name == ".gitkeep":
       continue
 
-    image_path = os.path.join(DATA_FOLDER, image_file_name)
-    encoded_image = _encode_image(image_path)
-    details = extract_details_from_screenshot(encoded_image)
-    print("Storing: ", details)
+    try:
+      document = _process_image(image_file_name)
+      details = document[0]
+      store.add_document(details, document)
+    except requests.HTTPError as e:
+      print(f"Error processing {image_file_name}: {e}")
 
-    document = (details, encoded_image)
-    store.add_document(details, document)
+
+def _process_image(image_file_name: str) -> Document:
+  print("======Processing======")
+  print(f"Image: {image_file_name}")
+
+  image_path = os.path.join(DATA_FOLDER, image_file_name)
+  encoded_image = _encode_image(image_path)
+
+  details = extract_details_from_screenshot(encoded_image)
+
+  print(f"Storing: {details}")
+
+  document = (details, encoded_image)
+  store.add_document(details, document)
 
 
 if __name__ == "__main__":

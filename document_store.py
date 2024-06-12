@@ -60,10 +60,9 @@ class PersistentDocumentStore(DocumentStore):
     def __init__(self, openai_client: OpenAI, output_path: Optional[str] = None):
         super().__init__(openai_client)
 
-        store_path = output_path or "./"
-        assert store_path.endswith("/")
-        self._doc_path = store_path + "document_store.pkl"
-        self._vec_path = store_path + "vectors_store.pkl"
+        store_path = output_path or ""
+        self._doc_path = os.path.join(store_path, "document_store.pkl")
+        self._vec_path = os.path.join(store_path, "vectors_store.pkl")
 
     def save_store(self) -> None:
         with open(self._doc_path, "wb") as document_file:
