@@ -53,19 +53,23 @@ class DocumentStore:
     def save_store(self, output_path: str) -> None:
         assert output_path.endswith("/")
 
-        with open("document_store.pkl", "wb") as document_file:
+        doc_path = output_path + "document_store.pkl"
+        with open(doc_path, "wb") as document_file:
             pickle.dump(self._document_store, document_file)
 
-        with open("vectors_store.pkl", "wb") as vectors_file:
+        vec_path = output_path + "vectors_store.pkl"
+        with open(vec_path, "wb") as vectors_file:
             pickle.dump(self._vectors_store, vectors_file)
 
     def load_store(self, output_path: str) -> None:
         assert output_path.endswith("/")
 
-        with open("document_store.pkl", "rb") as document_file:
+        doc_path = output_path + "document_store.pkl"
+        with open(doc_path, "rb") as document_file:
             document_store = pickle.load(document_file)
 
-        with open("vectors_store.pkl", "rb") as vectors_file:
+        vec_path = output_path + "vectors_store.pkl"
+        with open(vec_path, "rb") as vectors_file:
             vectors_store = pickle.load(vectors_file)
 
         self._document_store = document_store
