@@ -22,14 +22,20 @@ OPEN_AI_HEADERS = {
 }
 
 MAX_OUTPUT_TOKENS = 800
-SYSTEM_PROMPT = ("You are an assistant looking through the user's macOS screen"
-                 " to extract relevant information about what's happening on"
-                 " screen and what the user is trying to achieve. This"
-                 " information is then going to be stored, so that we can"
-                 " recall later, once the user asks questions.\n"
-                 "When analysing a screenshot, focus on details that might be"
-                 " relevant to the user in the future. They may want to"
-                 " remember what they were doing in the past.")
+EXTRACT_PROMPT = ("You are an assistant looking through the user's macOS screen"
+                  " to extract relevant information about what's happening on"
+                  " screen and what the user is trying to achieve. This"
+                  " information is then going to be stored, so that we can"
+                  " recall later, once the user asks questions.\n"
+                  "When analysing a screenshot, focus on details that might be"
+                  " relevant to the user in the future. They may want to"
+                  " remember what they were doing in the past.")
+
+ANSWER_PROMPT = ("You are an assistant looking through descriptions of"
+                 " screenshots from a user to answer questions about what was"
+                 " happening on screen.\n"
+                 "Keep the answers concise and relevant to the user's query."
+                 " A single sentence is ideal.")
 
 
 openai_client = OpenAI(api_key=API_KEY)
@@ -43,7 +49,7 @@ def extract_details_from_screenshot(encoded_image: str) -> str:
     "messages": [
       {
           "role": "system",
-          "content": SYSTEM_PROMPT
+          "content": EXTRACT_PROMPT
       },
       {
         "role": "user",
@@ -81,12 +87,6 @@ store = PersistentDocumentStore(openai_client=openai_client,
                                 output_path=STORES_FOLDER)
 
 
-def recall(query: str, top_k: int = 5) -> list[Document]:
-  results = store.search(query, top_k)
-  # TODO: ask llm to rank and filter the results
-  return results
-
-
 def _process_all_images():
   for image_file_name in os.listdir(DATA_FOLDER):
     if image_file_name == ".gitkeep":
@@ -115,7 +115,35 @@ def _process_image(image_file_name: str) -> Document:
   store.add_document(details, document)
 
 
-if __name__ == "__main__":
+def recall(query: str, top_k: int) -> tuple[str, list[Document]] | None:
+  documents = store.search(query, top_k)
+
+  completion = openai_client.chat.completions.create(
+    model=INFERENCE_MODEL_NAME,
+    messages=[
+      {"role": "system", "content": ANSWER_PROMPT},
+      {"role": "user", "content": _documents_to_prompt(documents)},
+      {"role": "assistant", "content": "ok, what do you want to know?"},
+      {"role": "user", "content": query}
+    ]
+  )
+
+  if not completion.choices[0].message.content:
+    return None
+
+  return completion.choices[0].message.content, documents
+
+
+def _documents_to_prompt(documents: list[Document]) -> str:
+  prompt = ["Here's a list of screenshot descriptions:"]
+
+  for i, (details, _) in enumerate(documents):
+    prompt.append(f"{i + 1}. {details}")
+
+  return "\n\n".join(prompt)
+
+
+def main() -> None:
   store.load_store()
 
   if len(store.documents) == 0:
@@ -123,7 +151,16 @@ if __name__ == "__main__":
     store.save_store()
 
   recall_query = "When was I using OBS?"
-  results = recall(recall_query, top_k=2)
+  response = recall(recall_query, top_k=3)
 
-  all_details = [details for details, _ in results]
-  print(f"Results: {all_details}\nCount: {len(results)}")
+  if not response:
+    print(f"No answer found for query: {recall_query}")
+    return
+
+  answer, documents = response
+  all_details = [details for details, _ in documents]
+  print(f"Answer: {answer}\n\n\nResults: {all_details}\nCount: {len(documents)}")
+
+
+if __name__ == "__main__":
+  main()
