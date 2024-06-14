@@ -1,6 +1,10 @@
 import os
 import requests
 import base64
+import io
+import tkinter as tk
+from tkinter import ttk
+from PIL import Image, ImageTk
 from openai import OpenAI
 
 from document_store import Document, PersistentDocumentStore
@@ -83,6 +87,12 @@ def _encode_image(image_path: str) -> str:
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 
+def _decode_base64_image(base64_str) -> Image.Image:
+    image_data = base64.b64decode(base64_str)
+    image = Image.open(io.BytesIO(image_data))
+    return image
+
+
 store = PersistentDocumentStore(openai_client=openai_client,
                                 output_path=STORES_FOLDER)
 
@@ -143,6 +153,32 @@ def _documents_to_prompt(documents: list[Document]) -> str:
   return "\n\n".join(prompt)
 
 
+def show_results(answer: str, documents: list[Document]) -> None:
+  root = tk.Tk()
+  root.title("Mochi Flashback")
+
+  _show_answer(answer)
+  _show_gallery(documents)
+
+  root.mainloop()
+
+
+def _show_answer(answer: str) -> None:
+  pass
+
+
+def _show_gallery(documents: list[Document]) -> None:
+  thumbnail_size = (200, 200)
+  for i, (details, encoded_image) in enumerate(documents):
+    image = _decode_base64_image(encoded_image)
+    image = image.thumbnail(thumbnail_size)
+    image_tk = ImageTk.PhotoImage(image)
+    print(image_tk)
+
+    # img_label = ttk.Label(image=image_tk)
+    # img_label.pack()
+
+
 def main() -> None:
   store.load_store()
 
@@ -158,9 +194,14 @@ def main() -> None:
     return
 
   answer, documents = response
+  show_results(answer, documents)
+
   all_details = [details for details, _ in documents]
-  print(f"Answer: {answer}\n\n\nResults: {all_details}\nCount: {len(documents)}")
+  print(f"Answer: {answer}\n
+        \n\nResults: {all_details}\nCount: {len(documents)}")
 
 
 if __name__ == "__main__":
-  main()
+  # main()
+  store.load_store()
+  show_results("This is a test", store.documents)
