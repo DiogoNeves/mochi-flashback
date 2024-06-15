@@ -1,11 +1,12 @@
 import os
-from typing import List
 
 from openai import OpenAI
 from typing_extensions import TypedDict
 
 import solara
 import solara.lab
+
+from document_store import Document, PersistentDocumentStore
 
 
 class MessageDict(TypedDict):
@@ -16,63 +17,69 @@ class MessageDict(TypedDict):
 API_KEY = os.environ.get("STREAM_OPEN_AI_KEY")
 INFERENCE_MODEL_NAME = "gpt-4o"
 
+STORES_FOLDER = "stores/"
+
+ANSWER_PROMPT = ("You are an assistant looking through descriptions of"
+                 " screenshots from a user to answer questions about what was"
+                 " happening on screen.\n"
+                 "Keep the answers concise and relevant to the user's query."
+                 " A single sentence is ideal.")
+
 
 openai_client = OpenAI(api_key=API_KEY)
 
-messages: solara.Reactive[List[MessageDict]] = solara.reactive([])
+query: solara.Reactive[str] = solara.reactive("")
+answer: solara.Reactive[str] = solara.reactive("")
 
 
-def add_chunk_to_ai_message(chunk: str):
-    messages.value = [
-        *messages.value[:-1],
-        {
-            "role": "assistant",
-            "content": messages.value[-1]["content"] + chunk,
-        },
+def create_messages(query: str) -> list[MessageDict]:
+    store = PersistentDocumentStore(openai_client=openai_client,
+                                    output_path=STORES_FOLDER)
+    store.load_store()
+    
+    documents = store.search(query, top_k=3)
+
+    return [
+      {"role": "system", "content": ANSWER_PROMPT},
+      {"role": "user", "content": _documents_to_prompt(documents)},
+      {"role": "assistant", "content": "ok, what do you want to know?"},
+      {"role": "user", "content": query}
     ]
+
+
+def _documents_to_prompt(documents: list[Document]) -> str:
+    prompt = ["Here's a list of screenshot descriptions:"]
+
+    for i, (details, _) in enumerate(documents):
+        prompt.append(f"{i + 1}. {details}")
+
+    return "\n\n".join(prompt)
 
 
 @solara.component
 def Page():
-    user_message_count = len([m for m in messages.value if m["role"] == "user"])
-
     def send(message):
-        messages.value = [
-            *messages.value,
-            {"role": "user", "content": message},
-        ]
+        print("Sending message")
+        query.value = message
 
     def call_openai():
-        if user_message_count == 0:
+        if not query.value:
+            print("No messages")
             return
-
+        print("Calling openai")
         response = openai_client.chat.completions.create(
             model=INFERENCE_MODEL_NAME,
-            messages=messages.value,  # type: ignore
-            stream=True,
+            messages=create_messages(query.value)  # type: ignore
         )
-        messages.value = [*messages.value, {"role": "assistant", "content": ""}]
-        for chunk in response:
-            if chunk.choices[0].finish_reason == "stop":  # type: ignore
-                return
-            add_chunk_to_ai_message(chunk.choices[0].delta.content)  # type: ignore
+        answer.value = response.choices[0].message.content or ""
 
-    task = solara.lab.use_task(call_openai, dependencies=[user_message_count])  # type: ignore
+    task = solara.lab.use_task(call_openai, dependencies=[query.value])  # type: ignore
 
     with solara.Column(
         style={"width": "700px", "height": "50vh"},
     ):
-        with solara.lab.ChatBox():
-            for item in messages.value:
-                with solara.lab.ChatMessage(
-                    user=item["role"] == "user",
-                    avatar=False,
-                    name="ChatGPT" if item["role"] == "assistant" else "User",
-                    color="rgba(0,0,0, 0.06)" if item["role"] == "assistant" else "#ff991f",
-                    avatar_background_color="primary" if item["role"] == "assistant" else None,
-                    border_radius="20px",
-                ):
-                    solara.Markdown(item["content"])
         if task.pending:
             solara.Text("I'm thinking...", style={"font-size": "1rem", "padding-left": "20px"})
+        if answer.value:
+            solara.Text(answer.value, style={"font-size": "1rem", "padding-left": "20px"})
         solara.lab.ChatInput(send_callback=send, disabled=task.pending)
