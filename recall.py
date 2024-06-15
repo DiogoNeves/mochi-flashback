@@ -1,4 +1,7 @@
+import io
 import os
+from PIL import Image
+import base64
 
 from openai import OpenAI
 from typing_extensions import TypedDict
@@ -30,6 +33,7 @@ openai_client = OpenAI(api_key=API_KEY)
 
 query: solara.Reactive[str] = solara.reactive("")
 answer: solara.Reactive[str] = solara.reactive("")
+documents: solara.Reactive[list[Document]] = solara.reactive([])
 
 
 def create_messages(query: str) -> list[MessageDict]:
@@ -37,11 +41,11 @@ def create_messages(query: str) -> list[MessageDict]:
                                     output_path=STORES_FOLDER)
     store.load_store()
     
-    documents = store.search(query, top_k=3)
+    documents.value = store.search(query, top_k=3)
 
     return [
       {"role": "system", "content": ANSWER_PROMPT},
-      {"role": "user", "content": _documents_to_prompt(documents)},
+      {"role": "user", "content": _documents_to_prompt(documents.value)},
       {"role": "assistant", "content": "ok, what do you want to know?"},
       {"role": "user", "content": query}
     ]
@@ -54,6 +58,11 @@ def _documents_to_prompt(documents: list[Document]) -> str:
         prompt.append(f"{i + 1}. {details}")
 
     return "\n\n".join(prompt)
+
+
+def _decode_image(base64_image: str) -> Image.Image:
+    image_bytes = base64.b64decode(base64_image)
+    return Image.open(io.BytesIO(image_bytes))
 
 
 @solara.component
@@ -72,6 +81,7 @@ def Page():
             messages=create_messages(query.value)  # type: ignore
         )
         answer.value = response.choices[0].message.content or ""
+        query.value = ""
 
     task = solara.lab.use_task(call_openai, dependencies=[query.value])  # type: ignore
 
@@ -80,6 +90,21 @@ def Page():
     ):
         if task.pending:
             solara.Text("I'm thinking...", style={"font-size": "1rem", "padding-left": "20px"})
-        if answer.value:
-            solara.Text(answer.value, style={"font-size": "1rem", "padding-left": "20px"})
+
         solara.lab.ChatInput(send_callback=send, disabled=task.pending)
+
+        if not answer.value:
+            return
+
+        solara.Text(answer.value, style={"font-size": "1rem", "padding-left": "20px"})
+
+        if not documents.value:
+            return
+
+        with solara.GridFixed(columns=3):
+            for document in documents.value:
+                with solara.Column(style={"padding": "10px"}):
+                    details, base64_image = document
+                    decoded_image = _decode_image(base64_image)
+                    solara.Image(decoded_image)
+                    solara.Text(details, style={"font-size": "1rem"})
