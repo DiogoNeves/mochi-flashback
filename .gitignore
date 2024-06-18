@@ -1,6 +1,6 @@
 # Project files
 data/
-stores/
+*stores/
 *.pkl
 
 # Byte-compiled / optimized / DLL files
