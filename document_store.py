@@ -8,12 +8,19 @@ Document = Any
 Embedding = list[float]
 
 
+# API_KEY = os.getenv("STREAM_OPEN_AI_KEY")
+API_KEY = "lm-studio"
+SERVER_URL = "http://localhost:1234/v1"
+
+# EMBEDDING_MODEL_NAME = "text-embedding-3-small"
 EMBEDDING_MODEL_NAME = "nomic-ai/nomic-embed-text-v1.5-GGUF"
+
+# openai_client = OpenAI(api_key=API_KEY)
+openai_client = OpenAI(base_url=SERVER_URL, api_key=API_KEY)
 
 
 class DocumentStore:
-    def __init__(self, openai_client: OpenAI):
-        self._openai_client = openai_client
+    def __init__(self):
         self._document_store: list[Document] = []
         self._vectors_store: list[Embedding] = []
 
@@ -45,7 +52,7 @@ class DocumentStore:
         return top_documents
     
     def _vectorise_text(self, text: str) -> Embedding:
-        response = self._openai_client.embeddings.create(
+        response = openai_client.embeddings.create(
             input=text,
             model=EMBEDDING_MODEL_NAME
         )
@@ -57,8 +64,8 @@ class PersistentDocumentStore(DocumentStore):
     This should only be used for debugging and development purposes.
     It uses pickle to serialize the document and vector stores."""
 
-    def __init__(self, openai_client: OpenAI, output_path: Optional[str] = None):
-        super().__init__(openai_client)
+    def __init__(self, output_path: Optional[str] = None):
+        super().__init__()
 
         store_path = output_path or ""
         self._doc_path = os.path.join(store_path, "document_store.pkl")

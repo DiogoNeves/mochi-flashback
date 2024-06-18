@@ -11,7 +11,8 @@ from document_store import Document, PersistentDocumentStore
 # 4. Recall <- user triggered
 
 DATA_FOLDER = "data/"
-STORES_FOLDER = "stores/"
+# STORES_FOLDER = "openai_stores/"
+STORES_FOLDER = "local_stores/"
 
 INFERENCE_MODEL_NAME = "xtuner/llava-llama-3-8b-v1_1-gguf"
 API_KEY = "lm-studio"
@@ -77,8 +78,7 @@ def _encode_image(image_path: str) -> str:
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 
-store = PersistentDocumentStore(openai_client=openai_client,
-                                output_path=STORES_FOLDER)
+store = PersistentDocumentStore(output_path=STORES_FOLDER)
 
 
 def _process_all_images():
@@ -111,6 +111,8 @@ def _process_image(image_file_name: str) -> Document:
   document = (details, encoded_image)
   store.add_document(details, document)
 
+  return document
+
 
 def recall(query: str, top_k: int) -> tuple[str, list[Document]] | None:
   documents = store.search(query, top_k)
@@ -141,22 +143,9 @@ def _documents_to_prompt(documents: list[Document]) -> str:
 
 
 def main() -> None:
-  store.load_store()
-
-  if len(store.documents) == 0:
-    _process_all_images()
-    store.save_store()
-
-  recall_query = "When was I using OBS?"
-  response = recall(recall_query, top_k=3)
-
-  if not response:
-    print(f"No answer found for query: {recall_query}")
-    return
-
-  answer, documents = response
-  all_details = [details for details, _ in documents]
-  print(f"Answer: {answer}\n\n\nResults: {all_details}\nCount: {len(documents)}")
+  _process_all_images()
+  store.save_store()
+  print("Done processing images")
 
 
 if __name__ == "__main__":
