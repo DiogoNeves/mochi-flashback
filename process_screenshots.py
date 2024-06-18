@@ -45,7 +45,7 @@ def extract_details_from_screenshot(encoded_image: str) -> str:
   user_message = ("Provide a short description of what's happening in this"
                   " screenshot.")
   completion = openai_client.chat.completions.create(
-    model="LM Studio Community/Meta-Llama-3-8B-Instruct-GGUF",
+    model=INFERENCE_MODEL_NAME,
     messages=[
       {
         "role": "system",
@@ -63,8 +63,7 @@ def extract_details_from_screenshot(encoded_image: str) -> str:
           },
         ],
       }
-    ],
-    max_tokens=1000
+    ]
   )
 
   if not completion.choices or not completion.choices[0].message.content:
@@ -100,8 +99,11 @@ def _process_image(image_file_name: str) -> Document:
   print(f"Image: {image_file_name}")
 
   image_path = os.path.join(DATA_FOLDER, image_file_name)
+
+  print("Encoding image")
   encoded_image = _encode_image(image_path)
 
+  print("Extracting details")
   details = extract_details_from_screenshot(encoded_image)
 
   print(f"Storing: {details}")
