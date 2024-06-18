@@ -1,5 +1,4 @@
 import io
-import os
 from PIL import Image
 import base64
 
@@ -17,8 +16,8 @@ class MessageDict(TypedDict):
     content: str
 
 
-API_KEY = os.environ.get("STREAM_OPEN_AI_KEY")
-INFERENCE_MODEL_NAME = "gpt-4o"
+INFERENCE_MODEL_NAME = "xtuner/llava-llama-3-8b-v1_1-gguf"
+API_KEY = "lm-studio"
 
 STORES_FOLDER = "stores/"
 
@@ -29,7 +28,7 @@ ANSWER_PROMPT = ("You are an assistant looking through descriptions of"
                  " A single sentence is ideal.")
 
 
-openai_client = OpenAI(api_key=API_KEY)
+openai_client = OpenAI(base_url=SERVER_URL, api_key=API_KEY)
 
 query: solara.Reactive[str] = solara.reactive("")
 answer: solara.Reactive[str] = solara.reactive("")
