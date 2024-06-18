@@ -1,5 +1,4 @@
 import io
-import os
 from PIL import Image
 import base64
 
@@ -17,10 +16,12 @@ class MessageDict(TypedDict):
     content: str
 
 
-API_KEY = os.environ.get("STREAM_OPEN_AI_KEY")
-INFERENCE_MODEL_NAME = "gpt-4o"
+INFERENCE_MODEL_NAME = "xtuner/llava-llama-3-8b-v1_1-gguf"
+API_KEY = "lm-studio"
+SERVER_URL = "http://localhost:1234/v1"
 
-STORES_FOLDER = "stores/"
+# STORES_FOLDER = "openai_stores/"
+STORES_FOLDER = "local_stores/"
 
 ANSWER_PROMPT = ("You are an assistant looking through descriptions of"
                  " screenshots from a user to answer questions about what was"
@@ -29,7 +30,7 @@ ANSWER_PROMPT = ("You are an assistant looking through descriptions of"
                  " A single sentence is ideal.")
 
 
-openai_client = OpenAI(api_key=API_KEY)
+openai_client = OpenAI(base_url=SERVER_URL, api_key=API_KEY)
 
 query: solara.Reactive[str] = solara.reactive("")
 answer: solara.Reactive[str] = solara.reactive("")
@@ -37,8 +38,7 @@ documents: solara.Reactive[list[Document]] = solara.reactive([])
 
 
 def create_messages(query: str) -> list[MessageDict]:
-    store = PersistentDocumentStore(openai_client=openai_client,
-                                    output_path=STORES_FOLDER)
+    store = PersistentDocumentStore(output_path=STORES_FOLDER)
     store.load_store()
     
     documents.value = store.search(query, top_k=3)

@@ -11,11 +11,12 @@ from document_store import Document, PersistentDocumentStore
 # 4. Recall <- user triggered
 
 DATA_FOLDER = "data/"
-STORES_FOLDER = "stores/"
+# STORES_FOLDER = "openai_stores/"
+STORES_FOLDER = "local_stores/"
 
-EMBEDDING_MODEL_NAME = "text-embedding-3-small"
-INFERENCE_MODEL_NAME = "gpt-4o"
-API_KEY = os.environ.get("STREAM_OPEN_AI_KEY")
+INFERENCE_MODEL_NAME = "xtuner/llava-llama-3-8b-v1_1-gguf"
+API_KEY = "lm-studio"
+SERVER_URL = "http://localhost:1234/v1"
 OPEN_AI_HEADERS = {
   "Content-Type": "application/json",
   "Authorization": f"Bearer {API_KEY}"
@@ -38,44 +39,38 @@ ANSWER_PROMPT = ("You are an assistant looking through descriptions of"
                  " A single sentence is ideal.")
 
 
-openai_client = OpenAI(api_key=API_KEY)
+openai_client = OpenAI(base_url=SERVER_URL, api_key=API_KEY)
 
 
 def extract_details_from_screenshot(encoded_image: str) -> str:
   user_message = ("Provide a short description of what's happening in this"
                   " screenshot.")
-  payload = {
-    "model": INFERENCE_MODEL_NAME,
-    "messages": [
+  completion = openai_client.chat.completions.create(
+    model=INFERENCE_MODEL_NAME,
+    messages=[
       {
-          "role": "system",
-          "content": EXTRACT_PROMPT
+        "role": "system",
+        "content": EXTRACT_PROMPT,
       },
       {
         "role": "user",
         "content": [
-          {
-            "type": "text",
-            "text": user_message
-          },
+          {"type": "text", "text": user_message},
           {
             "type": "image_url",
             "image_url": {
               "url": f"data:image/jpeg;base64,{encoded_image}"
-            }
-          }
-        ]
+            },
+          },
+        ],
       }
-    ],
-    "max_tokens": MAX_OUTPUT_TOKENS
-  }
+    ]
+  )
 
-  response = requests.post("https://api.openai.com/v1/chat/completions",
-                           headers=OPEN_AI_HEADERS, json=payload)
-  response.raise_for_status()
+  if not completion.choices or not completion.choices[0].message.content:
+    raise ValueError("No completion choices found")
 
-  model_response = response.json()
-  return model_response["choices"][0]["message"]["content"]
+  return completion.choices[0].message.content
 
 
 def _encode_image(image_path: str) -> str:
@@ -83,8 +78,7 @@ def _encode_image(image_path: str) -> str:
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 
-store = PersistentDocumentStore(openai_client=openai_client,
-                                output_path=STORES_FOLDER)
+store = PersistentDocumentStore(output_path=STORES_FOLDER)
 
 
 def _process_all_images():
@@ -105,14 +99,19 @@ def _process_image(image_file_name: str) -> Document:
   print(f"Image: {image_file_name}")
 
   image_path = os.path.join(DATA_FOLDER, image_file_name)
+
+  print("Encoding image")
   encoded_image = _encode_image(image_path)
 
+  print("Extracting details")
   details = extract_details_from_screenshot(encoded_image)
 
   print(f"Storing: {details}")
 
   document = (details, encoded_image)
   store.add_document(details, document)
+
+  return document
 
 
 def recall(query: str, top_k: int) -> tuple[str, list[Document]] | None:
@@ -144,22 +143,9 @@ def _documents_to_prompt(documents: list[Document]) -> str:
 
 
 def main() -> None:
-  store.load_store()
-
-  if len(store.documents) == 0:
-    _process_all_images()
-    store.save_store()
-
-  recall_query = "When was I using OBS?"
-  response = recall(recall_query, top_k=3)
-
-  if not response:
-    print(f"No answer found for query: {recall_query}")
-    return
-
-  answer, documents = response
-  all_details = [details for details, _ in documents]
-  print(f"Answer: {answer}\n\n\nResults: {all_details}\nCount: {len(documents)}")
+  _process_all_images()
+  store.save_store()
+  print("Done processing images")
 
 
 if __name__ == "__main__":
