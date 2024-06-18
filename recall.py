@@ -18,6 +18,7 @@ class MessageDict(TypedDict):
 
 INFERENCE_MODEL_NAME = "xtuner/llava-llama-3-8b-v1_1-gguf"
 API_KEY = "lm-studio"
+SERVER_URL = "http://localhost:1234/v1"
 
 STORES_FOLDER = "stores/"
 
