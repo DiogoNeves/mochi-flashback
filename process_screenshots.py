@@ -13,9 +13,9 @@ from document_store import Document, PersistentDocumentStore
 DATA_FOLDER = "data/"
 STORES_FOLDER = "stores/"
 
-EMBEDDING_MODEL_NAME = "text-embedding-3-small"
-INFERENCE_MODEL_NAME = "gpt-4o"
-API_KEY = os.environ.get("STREAM_OPEN_AI_KEY")
+INFERENCE_MODEL_NAME = "xtuner/llava-llama-3-8b-v1_1-gguf"
+API_KEY = "lm-studio"
+SERVER_URL = "http://localhost:1234/v1"
 OPEN_AI_HEADERS = {
   "Content-Type": "application/json",
   "Authorization": f"Bearer {API_KEY}"
@@ -38,44 +38,39 @@ ANSWER_PROMPT = ("You are an assistant looking through descriptions of"
                  " A single sentence is ideal.")
 
 
-openai_client = OpenAI(api_key=API_KEY)
+openai_client = OpenAI(base_url=SERVER_URL, api_key=API_KEY)
 
 
 def extract_details_from_screenshot(encoded_image: str) -> str:
   user_message = ("Provide a short description of what's happening in this"
                   " screenshot.")
-  payload = {
-    "model": INFERENCE_MODEL_NAME,
-    "messages": [
+  completion = openai_client.chat.completions.create(
+    model="LM Studio Community/Meta-Llama-3-8B-Instruct-GGUF",
+    messages=[
       {
-          "role": "system",
-          "content": EXTRACT_PROMPT
+        "role": "system",
+        "content": EXTRACT_PROMPT,
       },
       {
         "role": "user",
         "content": [
-          {
-            "type": "text",
-            "text": user_message
-          },
+          {"type": "text", "text": user_message},
           {
             "type": "image_url",
             "image_url": {
               "url": f"data:image/jpeg;base64,{encoded_image}"
-            }
-          }
-        ]
+            },
+          },
+        ],
       }
     ],
-    "max_tokens": MAX_OUTPUT_TOKENS
-  }
+    max_tokens=1000
+  )
 
-  response = requests.post("https://api.openai.com/v1/chat/completions",
-                           headers=OPEN_AI_HEADERS, json=payload)
-  response.raise_for_status()
+  if not completion.choices or not completion.choices[0].message.content:
+    raise ValueError("No completion choices found")
 
-  model_response = response.json()
-  return model_response["choices"][0]["message"]["content"]
+  return completion.choices[0].message.content
 
 
 def _encode_image(image_path: str) -> str:

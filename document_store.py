@@ -8,7 +8,7 @@ Document = Any
 Embedding = list[float]
 
 
-EMBEDDING_MODEL_NAME = "text-embedding-3-small"
+EMBEDDING_MODEL_NAME = "nomic-ai/nomic-embed-text-v1.5-GGUF"
 
 
 class DocumentStore:
