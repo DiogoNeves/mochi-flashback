@@ -11,7 +11,7 @@ coding session on Twitch. The goal was to build a simple clone of Microsoft.
 Follow the development of the code available in this repo.
 </p>
   
-  
+<p></p>
   
 ## Thanks to
 https://solara.dev/ for development this nice framework!
