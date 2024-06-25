@@ -6,16 +6,10 @@ coding session on Twitch. The goal was to build a simple clone of Microsoft
 and see how far i could get in a week.  
 I have no intention to maintain this project.  
 
-
-<p align="left">
-<a href="https://youtu.be/hAWpsIuem10](https://www.youtube.com/playlist?list=PLqFOswg8ElTKXaAtYWmWYpR0JY0uWgE1T" title="Mochi Flashback Playlist: Day 1 to 5"><img src="https://i3.ytimg.com/vi/NHaPkm_-p74/maxresdefault.jpg" alt="Mochi Flashback Playlist: Day 1 to 5" width="300px" align="left" /></a>
-<a href="https://www.youtube.com/playlist?list=PLqFOswg8ElTKXaAtYWmWYpR0JY0uWgE1T">Day 1 to 5 of Mochi Flashback streams playlist</a>
-<br/>
-Follow the development of the code available in this repo.
-</p>
-  
-<p></p>
+[Day 1 to 5 of Mochi Flashback streams playlist](https://www.youtube.com/playlist?list=PLqFOswg8ElTKXaAtYWmWYpR0JY0uWgE1T)  
+Follow the development of the code available in this repo.  
+[![Mochi Flashback Playlist: Day 1 to 5](https://i3.ytimg.com/vi/NHaPkm_-p74/hqdefault.jpg)](https://youtu.be/hAWpsIuem10)
   
 ## 🙏 Thanks to
-https://solara.dev/ for development this nice framework!
+https://solara.dev/ for developing this nice framework!
 
