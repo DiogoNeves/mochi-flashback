@@ -18,7 +18,7 @@ New content coming soon...
 
 [Day 1 to 5 of Mochi Flashback streams playlist](https://www.youtube.com/playlist?list=PLqFOswg8ElTKXaAtYWmWYpR0JY0uWgE1T)  
 Follow the development of the code available in this repo.  
-[![Mochi Flashback Playlist: Day 1 to 5](https://github.com/DiogoNeves/mochi-flashback/assets/178898/45373020-5f00-4ef6-a40c-fe8435995ec2)](https://youtu.be/hAWpsIuem10)
+[![Mochi Flashback Playlist: Day 1 to 5](https://github.com/DiogoNeves/mochi-flashback/assets/178898/45373020-5f00-4ef6-a40c-fe8435995ec2)](https://www.youtube.com/playlist?list=PLqFOswg8ElTKXaAtYWmWYpR0JY0uWgE1T)
   
 ## 🙏 Thanks to
 https://solara.dev/ for developing this nice framework!  
