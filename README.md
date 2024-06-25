@@ -61,3 +61,6 @@ $ solara run recall.py
 ### 4. Interact with the UI
 Here are sample results:  
 ![Results](https://github.com/DiogoNeves/mochi-flashback/assets/178898/423d16bf-c9e6-473a-aea4-5f3b0ecdb278)
+
+## License
+[LICENSE](https://github.com/DiogoNeves/mochi-flashback/LICENSE)
