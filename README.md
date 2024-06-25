@@ -6,7 +6,7 @@ coding session on Twitch. The goal was to build a simple clone of Microsoft
 and see how far i could get in a few hours across a week.  
 _I have no intention to maintain this project._  
 
-[Microsoft Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c)
+[Microsoft Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c){:target="_blank"}
 is a new feature in the coming Windows that allows users to search across
 any content they've seen on their PC.  
 Microsoft takes regular screenshots and has them available for searching
