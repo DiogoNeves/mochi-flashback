@@ -4,7 +4,17 @@
 Mochi Flashback was created as part of a live
 coding session on Twitch. The goal was to build a simple clone of Microsoft
 and see how far i could get in a few hours across a week.  
-I have no intention to maintain this project.  
+_I have no intention to maintain this project._  
+
+[Microsoft Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c)
+is a new feature in the coming Windows that allows users to search across
+any content they've seen on their PC.  
+Microsoft takes regular screenshots and has them available for searching
+with a natural language interface.  
+
+## Streams
+Follow me on [YouTube](https://www.youtube.com/@DiogoNeves) or [Twitch](https://www.twitch.tv/diogosnows).  
+New content coming soon...  
 
 [Day 1 to 5 of Mochi Flashback streams playlist](https://www.youtube.com/playlist?list=PLqFOswg8ElTKXaAtYWmWYpR0JY0uWgE1T)  
 Follow the development of the code available in this repo.  
